@@ -43,7 +43,7 @@ export function DigitalTwinPanel({ transformer }) {
   if (!live) return null;
 
   const risk = riskLabel(live.failureProbability);
-  const anomalies = getAnomaliesForTransformer(live);
+  const anomalies = live.anomalies || getAnomaliesForTransformer(live);
 
   return (
     <motion.section

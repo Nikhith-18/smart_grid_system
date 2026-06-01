@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: smart_grid
+      POSTGRES_USER: grid
+      POSTGRES_PASSWORD: grid
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grid -d smart_grid"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://grid:grid@postgres:5432/smart_grid
+      BACKEND_CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      SIMULATION_INTERVAL_SECONDS: 5
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

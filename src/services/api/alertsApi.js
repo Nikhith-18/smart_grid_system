@@ -1,4 +1,6 @@
-import { alerts } from '../../data/mockData';
-import { mockDelay } from './client';
+import { apiClient } from './client';
 
-export const getAlerts = async () => mockDelay(alerts);
+export const getAlerts = async () => {
+  const { data } = await apiClient.get('/alerts');
+  return data;
+};

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { wsUrl } from '../services/api/client';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const jitter = (value, amount, min, max, decimals = 0) =>
@@ -7,6 +8,7 @@ const jitter = (value, amount, min, max, decimals = 0) =>
 export const useTransformerStream = (transformer) => {
   const [live, setLive] = useState(transformer);
   const [events, setEvents] = useState([]);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     setLive(transformer);
@@ -15,6 +17,31 @@ export const useTransformerStream = (transformer) => {
 
   useEffect(() => {
     if (!transformer) return undefined;
+
+    const socket = new WebSocket(wsUrl('/ws/transformers'));
+
+    socket.onopen = () => setConnected(true);
+    socket.onclose = () => setConnected(false);
+    socket.onerror = () => setConnected(false);
+    socket.onmessage = (message) => {
+      try {
+        const payload = JSON.parse(message.data);
+        const next = payload.transformers?.find((item) => item.id === transformer.id);
+        if (!next) return;
+        setLive((current) => ({ ...current, ...next }));
+      } catch {
+        setConnected(false);
+      }
+    };
+
+    return () => {
+      socket.close();
+      setConnected(false);
+    };
+  }, [transformer]);
+
+  useEffect(() => {
+    if (!transformer || connected) return undefined;
 
     const timer = window.setInterval(() => {
       setLive((current) => {
@@ -57,7 +84,7 @@ export const useTransformerStream = (transformer) => {
     }, 3200);
 
     return () => window.clearInterval(timer);
-  }, [transformer]);
+  }, [connected, transformer]);
 
   useEffect(() => {
     if (!live) return;
